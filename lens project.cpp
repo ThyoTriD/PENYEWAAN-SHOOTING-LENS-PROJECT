@@ -469,3 +469,340 @@ bool loginAdmin() {
         return false;
     }
 }
+
+void menu1InputInventaris(LinkedList& ll, BST& bst, Stack& stk) {
+    if (!loginAdmin()) { pauseEnter(); return; }
+
+    string pilih = "1";
+    while (pilih == "1") {
+        cout << "\n[MENU INPUT INVENTARIS - NEW ENTRY]\n";
+        string id, nama, kat, spek, rak;
+        int stok;
+
+        cout << "1. Nama Alat      : "; cin.ignore(); getline(cin, nama);
+        cout << "2. Kategori       : "; getline(cin, kat);
+        cout << "3. Spesifikasi    : "; getline(cin, spek);
+        cout << "4. Lokasi Rak     : "; getline(cin, rak);
+        cout << "5. Jumlah Stok    : "; cin >> stok;
+
+        // Generate ID otomatis
+        string prefix = "UNK";
+        if (kat == "Lens" || kat == "Lensa")   prefix = "LNS";
+        else if (kat == "Lighting")             prefix = "LHT";
+        else if (kat == "Support")              prefix = "TRP";
+        else if (kat == "Camera")               prefix = "CAM";
+        else if (kat == "Audio")                prefix = "MIC";
+        id = prefix + "-" + to_string(100 + ll.totalItem + 1);
+
+        cout << "\n >> Sedang memproses data ke Linked List...\n";
+        cout << " >> Sinkronisasi dengan " << DB_FILE << "...\n";
+
+        Alat* node = ll.insertNode(id, nama, kat, spek, rak, "Tersedia", stok);
+        bst.insertAlat(node);
+        simpanKeFile(ll);
+
+        string logDesc = nama + " (ID: " + id + ")";
+        stk.push(getWaktuSekarang(), "MASUK", logDesc);
+        tulisActivityLog(getWaktuSekarang(), "MASUK", logDesc);
+
+        cout << " >> [DATA BERHASIL DITAMBAHKAN]\n";
+        cout << "    ID yang ditetapkan: " << id << "\n";
+
+        cout << "\nOpsi:\n";
+        cout << "[1] Tambah Data Lagi\n";
+        cout << "[K] Kembali ke Menu Utama\n";
+        cout << "Pilih: ";
+        cin >> pilih;
+        if (pilih == "K" || pilih == "k") break;
+    }
+}
+
+
+void menu2Peminjaman(Queue& q, Stack& stk) {
+    string pilih;
+    do {
+        cout << "\n[TRANSAKSI PEMINJAMAN - Queue System]\n";
+        cout << "Prinsip: First In First Out (Pelanggan Terlama Dilayani Lebih Dulu)\n\n";
+        cout << "DAFTAR ANTREAN SAAT INI:\n";
+        q.tampilkan();
+
+        cout << "\nOpsi Operasi:\n";
+        cout << "[1] Tambah Antrean Baru (Enqueue)\n";
+        cout << "[2] Proses/Layani Antrean Terdepan (Dequeue)\n";
+        cout << "[3] Kosongkan Seluruh Antrean (Clear)\n";
+        cout << "[K] Kembali ke Menu Utama\n";
+        cout << "Pilih Operasi: ";
+        cin >> pilih;
+
+        if (pilih == "1") {
+            string nama, alat;
+            int waktu;
+            cout << "Nama Pelanggan  : "; cin.ignore(); getline(cin, nama);
+            cout << "Alat yang Dicari: "; getline(cin, alat);
+            cout << "Estimasi Waktu (menit): "; cin >> waktu;
+            q.enqueue(nama, alat, waktu);
+            stk.push(getWaktuSekarang(), "KELUAR", alat + " (Dipinjam oleh: " + nama + ")");
+            tulisActivityLog(getWaktuSekarang(), "PEMINJAMAN", nama + " - " + alat);
+            cout << "[SUCCESS] Antrean baru ditambahkan.\n";
+        } else if (pilih == "2") {
+            QueueNode* node = q.dequeue();
+            if (node) {
+                cout << "[PROSES] Melayani: " << node->namaPelanggan
+                     << " | Alat: " << node->alatDicari << "\n";
+                stk.push(getWaktuSekarang(), "MASUK",
+                         node->alatDicari + " (Kembali dari: " + node->namaPelanggan + ")");
+                tulisActivityLog(getWaktuSekarang(), "SELESAI",
+                                 node->namaPelanggan + " - " + node->alatDicari);
+                delete node;
+            } else {
+                cout << "[INFO] Antrean kosong, tidak ada yang diproses.\n";
+            }
+        } else if (pilih == "3") {
+            q.clearQueue();
+            cout << "[SUCCESS] Seluruh antrean telah dikosongkan.\n";
+        }
+    } while (pilih != "K" && pilih != "k");
+}
+
+
+void menu3LogAktivitas(Stack& stk) {
+    string pilih;
+    do {
+        cout << "\n[LOG AKTIVITAS TERAKHIR] - Top of Stack\n";
+        stk.tampilkan();
+        cout << "[U] Undo Aktivitas Terakhir | [K] Kembali ke Menu\n";
+        cout << "Pilih: ";
+        cin >> pilih;
+
+        if (pilih == "U" || pilih == "u") {
+            StackNode* node = stk.pop();
+            if (node) {
+                cout << "[UNDO] Aktivitas dihapus: ["
+                     << node->waktu << "] " << node->jenis
+                     << " : " << node->deskripsi << "\n";
+                delete node;
+            } else {
+                cout << "[INFO] Stack kosong, tidak ada yang di-undo.\n";
+            }
+        }
+    } while (pilih != "K" && pilih != "k");
+}
+
+
+void menu4PencarianCepat(BST& bst, LinkedList& ll) {
+    string pilih;
+    do {
+        cout << "\n[PENCARIAN CEPAT - Binary Search Tree]\n";
+        cout << "Cari Nama Alat: \"";
+        string cari;
+        cin.ignore();
+        getline(cin, cari);
+        cout << "\"\n";
+
+        Alat* hasil = bst.cariByNama(cari);
+        if (hasil) {
+            cout << "\n[SEARCH RESULT - Binary Search Tree Path Found]\n";
+            cout << string(60, '-') << "\n";
+            cout << left << setw(18) << "ID Alat"     << ": " << hasil->id         << "\n";
+            cout << left << setw(18) << "Nama"        << ": " << hasil->nama       << "\n";
+            cout << left << setw(18) << "Spesifikasi" << ": " << hasil->spesifikasi<< "\n";
+            cout << left << setw(18) << "Status"      << ": " << hasil->status     << "\n";
+            cout << left << setw(18) << "Stok"        << ": " << hasil->stok       << "\n";
+            cout << left << setw(18) << "Lokasi Rak"  << ": " << hasil->lokasiRak  << "\n";
+            cout << string(60, '-') << "\n";
+            cout << "Tekan 'E' untuk Edit Spesifikasi | Tekan 'ESC' untuk Kembali\n";
+            cout << "Pilih: ";
+            cin >> pilih;
+            if (pilih == "E" || pilih == "e") {
+                string spekBaru;
+                cout << "Spesifikasi Baru: ";
+                cin.ignore();
+                getline(cin, spekBaru);
+                hasil->spesifikasi = spekBaru;
+                cout << "[SUCCESS] Spesifikasi berhasil diperbarui.\n";
+            }
+        } else {
+            // Fallback: cari dengan partial match di linked list
+            bool found = false;
+            Alat* curr = ll.head;
+            while (curr) {
+                if (curr->nama.find(cari) != string::npos ||
+                    curr->id.find(cari)   != string::npos) {
+                    cout << "\n[SEARCH RESULT - Linear Search]\n";
+                    cout << string(60, '-') << "\n";
+                    cout << left << setw(18) << "ID Alat"     << ": " << curr->id          << "\n";
+                    cout << left << setw(18) << "Nama"        << ": " << curr->nama        << "\n";
+                    cout << left << setw(18) << "Spesifikasi" << ": " << curr->spesifikasi << "\n";
+                    cout << left << setw(18) << "Status"      << ": " << curr->status      << "\n";
+                    cout << left << setw(18) << "Stok"        << ": " << curr->stok        << "\n";
+                    cout << left << setw(18) << "Lokasi Rak"  << ": " << curr->lokasiRak   << "\n";
+                    cout << string(60, '-') << "\n";
+                    found = true;
+                    break;
+                }
+                curr = curr->next;
+            }
+            if (!found)
+                cout << "[NOT FOUND] Alat dengan nama \"" << cari << "\" tidak ditemukan.\n";
+        }
+
+        cout << "\nCari lagi? [Y/N]: ";
+        cin >> pilih;
+    } while (pilih == "Y" || pilih == "y");
+}
+
+
+void menu5LaporanKerusakan(LinkedList& ll, Stack& stk) {
+    
+    cout << "\n[DAFTAR UNIT PERLU SERVIS]\n";
+    cout << string(60, '-') << "\n";
+
+    ifstream fileIn(SERVICE_FILE);
+    bool adaData = false;
+    if (fileIn.is_open()) {
+        string line;
+        int no = 1;
+        while (getline(fileIn, line)) {
+            if (!line.empty()) {
+                cout << no++ << ". " << line << "\n";
+                adaData = true;
+            }
+        }
+        fileIn.close();
+    }
+    if (!adaData)
+        cout << "  (Belum ada laporan kerusakan)\n";
+    cout << string(60, '-') << "\n";
+
+    char c;
+    cout << "Input Unit Baru untuk Servis? (y/n): ";
+    cin >> c;
+
+    if (c == 'y' || c == 'Y') {
+        string idAlat, deskripsi;
+        cout << "Masukkan ID Alat: ";
+        cin >> idAlat;
+        cin.ignore();
+        cout << "Masukkan Deskripsi Kerusakan: ";
+        getline(cin, deskripsi);
+
+        // Validasi ID
+        Alat* cek = ll.cariById(idAlat);
+        if (!cek) {
+            cout << "[WARNING] ID tidak ditemukan di inventaris, tetap dicatat.\n";
+        }
+
+        tulisServiceLog(idAlat, deskripsi);
+        stk.push(getWaktuSekarang(), "UPDATE",
+                 idAlat + " (Laporan: " + deskripsi + ")");
+        cout << "[SISTEM]: Data berhasil ditulis ke '" << SERVICE_FILE << "'.\n";
+    }
+
+    // Opsi hapus laporan (DELETE operation)
+    cout << "\nHapus semua laporan lama? (y/n): ";
+    cin >> c;
+    if (c == 'y' || c == 'Y') {
+        ofstream fileOut(SERVICE_FILE, ios::trunc);
+        fileOut.close();
+        cout << "[SUCCESS] Semua laporan dihapus.\n";
+    }
+
+    pauseEnter();
+}
+
+// 
+void menu6ManajemenStok(LinkedList& ll, BST& bst, Stack& stk) {
+    string pilih;
+    do {
+        cout << "\n[MANAJEMEN STOK - Linked List View]\n";
+        ll.tampilkan();
+
+        cout << "\nOpsi Pengurutan (Sorting):\n";
+        cout << "[A] Urutkan berdasarkan Nama (A-Z)\n";
+        cout << "[B] Urutkan berdasarkan ID Alat\n";
+        cout << "[C] Tambah Stok Baru (Insert Node)\n";
+        cout << "[D] Hapus Aset (Delete Node)\n";
+        cout << "[K] Kembali ke Menu Utama\n";
+        cout << "Pilih: ";
+        cin >> pilih;
+
+        if (pilih == "A" || pilih == "a") {
+            ll.sortByNama();
+            cout << "[SUCCESS] Diurutkan berdasarkan Nama (A-Z).\n";
+            simpanKeFile(ll);
+        } else if (pilih == "B" || pilih == "b") {
+            ll.sortById();
+            cout << "[SUCCESS] Diurutkan berdasarkan ID Alat.\n";
+            simpanKeFile(ll);
+        } else if (pilih == "C" || pilih == "c") {
+            if (!loginAdmin()) { pauseEnter(); continue; }
+            string id, nama, kat, spek, rak;
+            int stok;
+            cout << "Nama Alat      : "; cin.ignore(); getline(cin, nama);
+            cout << "Kategori       : "; getline(cin, kat);
+            cout << "Spesifikasi    : "; getline(cin, spek);
+            cout << "Lokasi Rak     : "; getline(cin, rak);
+            cout << "Jumlah Stok    : "; cin >> stok;
+
+            string prefix = "UNK";
+            if (kat == "Lens" || kat == "Lensa") prefix = "LNS";
+            else if (kat == "Lighting")          prefix = "LHT";
+            else if (kat == "Support")           prefix = "TRP";
+            else if (kat == "Camera")            prefix = "CAM";
+            else if (kat == "Audio")             prefix = "MIC";
+            id = prefix + "-" + to_string(100 + ll.totalItem + 1);
+
+            Alat* node = ll.insertNode(id, nama, kat, spek, rak, "Tersedia", stok);
+            bst.insertAlat(node);
+            simpanKeFile(ll);
+            stk.push(getWaktuSekarang(), "MASUK", nama + " (ID: " + id + ")");
+            tulisActivityLog(getWaktuSekarang(), "MASUK", nama);
+            cout << "[SUCCESS] Stok baru ditambahkan dengan ID: " << id << "\n";
+        } else if (pilih == "D" || pilih == "d") {
+            if (!loginAdmin()) { pauseEnter(); continue; }
+            if (ll.head == nullptr) {
+                cout << "[ERROR 404]: Gagal menghapus data.\n";
+                cout << "Penyebab: Pointer 'Head' menunjuk ke NULL (Data Kosong).\n";
+                cout << "Silakan isi data terlebih dahulu melalui Menu 1.\n";
+                pauseEnter();
+                continue;
+            }
+            string id;
+            cout << "Masukkan ID Alat yang akan dihapus: ";
+            cin >> id;
+            bool ok = ll.hapusById(id);
+            if (ok) {
+                simpanKeFile(ll);
+                stk.push(getWaktuSekarang(), "DELETE", "ID: " + id);
+                tulisActivityLog(getWaktuSekarang(), "DELETE", "ID: " + id);
+                cout << "[SUCCESS] Aset dengan ID " << id << " berhasil dihapus.\n";
+            } else {
+                cout << "[ERROR] ID " << id << " tidak ditemukan.\n";
+            }
+        }
+    } while (pilih != "K" && pilih != "k");
+}
+
+
+void tampilkanInfoSistem(LinkedList& ll, Queue& q) {
+    int keluar = 0;
+    int maintenance = 0;
+    Alat* curr = ll.head;
+    while (curr) {
+        if (curr->status == "Keluar") keluar++;
+        curr = curr->next;
+    }
+
+    ifstream sf(SERVICE_FILE);
+    string ln;
+    while (getline(sf, ln)) if (!ln.empty()) maintenance++;
+    sf.close();
+
+    int kapasitas = (ll.totalItem > 0) ? (ll.totalItem * 100 / (ll.totalItem + 5)) : 0;
+
+    cout << "[INFO SYSTEM]\n";
+    cout << ">> Total Aset Digital    : " << ll.totalItem << " Item\n";
+    cout << ">> Alat Sedang Keluar    : " << q.size << " Item (Check Queue)\n";
+    cout << ">> Status Penyimpanan    : " << kapasitas << "% Kapasitas Terpakai\n";
+    cout << ">> Peringatan            : " << maintenance << " Alat Perlu Maintenance\n";
+}
