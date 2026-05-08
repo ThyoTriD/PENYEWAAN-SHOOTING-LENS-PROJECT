@@ -806,3 +806,87 @@ void tampilkanInfoSistem(LinkedList& ll, Queue& q) {
     cout << ">> Status Penyimpanan    : " << kapasitas << "% Kapasitas Terpakai\n";
     cout << ">> Peringatan            : " << maintenance << " Alat Perlu Maintenance\n";
 }
+
+int main() {
+    // Inisialisasi struktur data dengan pointer
+    LinkedList* ll  = new LinkedList();
+    BST*        bst = new BST();
+    Queue*      q   = new Queue();
+    Stack*      stk = new Stack();
+
+    // Muat data awal dari file
+    muatDariFile(*ll, *bst);
+
+    // Data sampel jika database kosong
+    if (ll->totalItem == 0) {
+        Alat* n1 = ll->insertNode("LHT-003", "Godox AD200 Pro Speedlight",
+                                   "Lighting",  "200Ws, TTL, HSS",
+                                   "Rak C - Lighting Section", "Tersedia", 5);
+        Alat* n2 = ll->insertNode("LNS-012", "Sony FE 24-70mm f/2.8 GM II",
+                                   "Lens",      "E-Mount, Full Frame",
+                                   "Rak A - Zoom Section",    "Keluar",   2);
+        Alat* n3 = ll->insertNode("LNS-045", "Sony FE 70-200mm f/2.8 GM",
+                                   "Lens",      "E-Mount, OSS",
+                                   "Rak A - Zoom Section",    "Tersedia", 1);
+        Alat* n4 = ll->insertNode("TRP-001", "Tripod Libec TH-X",
+                                   "Support",   "Max 5kg Load, 165cm",
+                                   "Rak B - Support Section", "Tersedia", 3);
+        bst->insertAlat(n1); bst->insertAlat(n2);
+        bst->insertAlat(n3); bst->insertAlat(n4);
+        simpanKeFile(*ll);
+    }
+
+    // Stack awal (contoh log)
+    stk->push("09:45", "KELUAR", "Lensa 35mm GM (Dipinjam oleh: Tim Video)");
+    stk->push("09:30", "MASUK",  "Tripod Libec (Kembali dari: Project Wedding)");
+    stk->push("08:15", "UPDATE", "Sony A7IV (Status: Selesai Sensor Cleaning)");
+
+    // Queue awal
+    q->enqueue("Tim Video A",    "Lensa 35mm GM", 10);
+    q->enqueue("Project Wedding","Tripod Libec",   15);
+    q->enqueue("Budi Setiawan",  "Godox AD200",    22);
+
+    string pilihan;
+    do {
+        clearScreen();
+        cetakHeader();
+        tampilkanInfoSistem(*ll, *q);
+        cout << string(60, '-') << "\n";
+        cout << "1. input infentaris (hanya admin)\n";
+        cout << "2. Transaksi Peminjaman (Queue - FIFO)\n";
+        cout << "3. Log Aktivitas Terakhir (Stack - LIFO)\n";
+        cout << "4. Pencarian Cepat (Binary Search Tree)\n";
+        cout << "5. Laporan Kerusakan (CRUD & File Op)\n";
+        cout << "6. Manajemen Stok (Linked List & Sorting)\n";
+        cout << "0. Shutdown System\n";
+        cout << "============================================================\n";
+        cout << "Pilih Operasi: ";
+        cin >> pilihan;
+
+        if      (pilihan == "1") menu1InputInventaris(*ll, *bst, *stk);
+        else if (pilihan == "2") menu2Peminjaman(*q, *stk);
+        else if (pilihan == "3") menu3LogAktivitas(*stk);
+        else if (pilihan == "4") menu4PencarianCepat(*bst, *ll);
+        else if (pilihan == "5") menu5LaporanKerusakan(*ll, *stk);
+        else if (pilihan == "6") menu6ManajemenStok(*ll, *bst, *stk);
+        else if (pilihan == "0") {
+            cout << "\n[SYSTEM] Menyimpan data...\n";
+            simpanKeFile(*ll);
+            cout << "[SYSTEM] Shutdown selesai. Sampai jumpa!\n";
+            cout << "============================================================\n";
+        } else {
+            cout << "[ERROR] Pilihan tidak valid. Silakan coba lagi.\n";
+            pauseEnter();
+        }
+
+    } while (pilihan != "0");
+
+    // Bersihkan memori (pointer management)
+    delete ll;
+    delete bst;
+    delete q;
+    delete stk;
+
+    return 0;
+}
+
