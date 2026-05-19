@@ -4,8 +4,12 @@
 #include <ctime>
 #include <iomanip>
 #include <sstream>
+using namespace std;
 
-//blm 1 fng
+const string ADMIN_PASSWORD = "ADMIN2026";
+const string DB_FILE        = "database.bin.dat";
+const string SERVICE_FILE   = "service_log.txt";
+const string LOG_FILE       = "activity_log.txt";
 
 struct Alat {
     string id;
